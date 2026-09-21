@@ -1,0 +1,88 @@
+cloud_storage:
+  aliyun_chunk_size_mb: 10
+  auto_refresh_token: true
+  baidu_chunk_size_mb: 2
+  webdav_timeout_seconds: 30
+compression:
+  default_format: zip
+  default_level: 6
+  max_volume_size_mb: 0
+  temp_dir: null
+directory_history:
+- D:/
+- d:\
+- D:\gm\测试文件
+- D:/gm
+- C:/
+- E:/
+- D:/gm/测试文件
+keyword_history:
+- '*.MP3'
+- test
+- test_keyword_0
+- 系统
+- 洪荒
+- 我
+- 测试
+- '*.doc'
+- test1
+network:
+  chunk_size_mb: 2
+  max_concurrent_downloads: 3
+  max_concurrent_uploads: 2
+  retry_count: 3
+  retry_delay_seconds: 1
+  timeout_seconds: 30
+performance:
+  file_list_max_items: 10000
+  max_cache_items: 1000
+  max_worker_threads: 4
+  render_batch_size: 100
+  scroll_debounce_ms: 16
+  thumbnail_cache_size_mb: 100
+  thumbnail_preload_count: 20
+preview:
+  image_cache_size: 100
+  max_file_size: 50
+  text_encoding_detection: advanced
+search:
+  enable_indexing: true
+  enable_whoosh: true
+  index_locations: []
+  index_update_interval: 60
+  max_search_threads: 8
+  whoosh_index_dir: null
+tools:
+  batch_rename_template: '{prefix}_{index:03d}_{suffix}'
+  compress_level: 6
+  default_compress_format: zip
+transfer:
+  chunk_size: 8
+  ftp_connections: []
+  max_transfer_threads: 4
+  p2p_port: 58432
+  speed_limit: 0
+ui:
+  app_title: AFM-EST - 全能资源搜索管理器
+  auto_expand_folder_tree: true
+  default_group: none
+  default_view: detail
+  file_font: Microsoft YaHei
+  file_font_size: 10
+  folder_font: Microsoft YaHei
+  folder_font_size: 9
+  function_panel_visible: true
+  left_pane_path: D:\Program Files (x86)
+  remember_browse_path: false
+  remember_last_path: true
+  right_pane_path: C:\Users\Administrator\Downloads
+  show_hidden_files: false
+  splitter_ratio:
+  - 0.3032600454890068
+  - 0.3055344958301744
+  - 0.3912054586808188
+  sync_panes: false
+  theme: light
+  window_size:
+  - 1329
+  - 681

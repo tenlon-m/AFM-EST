@@ -1,0 +1,68 @@
+# ===== Python =====
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+.eggs/
+.pytest_cache/
+.coverage
+htmlcov/
+.mypy_cache/
+.ruff_cache/
+
+# 虚拟环境
+venv/
+.venv/
+env/
+ENV/
+
+# ===== Qt / PyInstaller 构建产物 =====
+build/
+*.pro.user
+*.user
+*.qmlc
+*.jsc
+
+# PyInstaller 输出（exe 走 Releases 发，不进仓库）
+dist/
+
+# ===== IDE =====
+.vscode/
+.idea/
+*.swp
+*.swo
+*.swn
+
+# ===== 项目本地数据/缓存 =====
+.arts/
+.codeartsdoer/
+.codebuddy/
+.merkle-snapshot.json
+whoosh_index/
+logs/
+*.log
+
+# 运行时生成的索引 / 缓存数据库（不应进 git）
+config/*.db
+*.sqlite
+*.sqlite3
+
+# ===== 系统垃圾 =====
+.DS_Store
+Thumbs.db
+desktop.ini
+ehthumbs.db
+$RECYCLE.BIN/
+
+# ===== 敏感信息（防止误提交） =====
+.env
+*.pem
+*.key
+secrets.yaml
+config/local.json
+
+# 但保留 spec/打包配置与构建脚本（可复现打包）
+!*.spec
+!*.nsi

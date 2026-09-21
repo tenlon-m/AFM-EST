@@ -1,0 +1,31 @@
+preview:
+  image_cache_size: 100
+  max_file_size: 50
+  text_encoding_detection: advanced
+search:
+  enable_indexing: true
+  index_locations: []
+  index_update_interval: 60
+  max_search_threads: 8
+tools:
+  batch_rename_template: '{prefix}_{index:03d}_{suffix}'
+  compress_level: 6
+  default_compress_format: zip
+transfer:
+  chunk_size: 8
+  ftp_connections: []
+  max_transfer_threads: 4
+  p2p_port: 58432
+  speed_limit: 0
+ui:
+  auto_expand_folder_tree: false
+  default_view: detail
+  show_hidden_files: false
+  splitter_ratio:
+  - 0.35
+  - 0.35
+  - 0.3
+  theme: light
+  window_size:
+  - 1200
+  - 600

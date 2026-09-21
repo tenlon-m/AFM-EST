@@ -1,0 +1,78 @@
+# ============================================
+# AFM-EST 依赖包列表（2026年6月更新）
+# ============================================
+#
+# 版本兼容性说明：
+# - Python: 3.9 - 3.12 (推荐 3.12)
+# - NumPy: 必须 < 2.0.0 (pandas 2.1.4 兼容性要求)
+# - PySide6: 6.7.2 (最新稳定版，2024.10发布)
+#
+# 安装命令：
+#   pip install -r requirements.txt
+#
+# 快速修复 NumPy 版本问题：
+#   pip install "numpy<2.0.0" "pandas==2.1.4" --force-reinstall
+#
+# 使用国内镜像源加速：
+#   pip install -r requirements.txt -i https://pypi.tuna.tsinghua.edu.cn/simple
+#
+# ============================================
+
+# Core GUI Framework
+PySide6==6.7.2
+
+# Configuration Management
+PyYAML==6.0.2
+
+# File Encoding Detection
+chardet==5.2.0
+# cchardet==2.1.7  # 需要Microsoft Visual C++ 14.0或更高版本编译
+
+# Document Processing
+python-docx==1.1.2
+openpyxl==3.1.5
+python-pptx==1.0.2
+pypdf==5.1.0  # 替代已停止维护的PyPDF2
+pdfplumber==0.11.4
+docx2txt==0.9.0
+
+# Image Processing
+Pillow==10.4.0
+opencv-python==4.10.0.84
+
+# Media Processing
+pydub==0.25.1
+moviepy==2.1.1
+
+# Compression
+py7zr==0.22.0
+rarfile==4.2
+python-magic==0.4.27
+
+# Search Engine
+whoosh==2.7.4
+watchdog==3.0.0
+
+# Syntax Highlighting & Markdown
+markdown==3.6
+pygments==2.18.0
+
+# Cloud Storage
+webdavclient3==3.0.1
+requests==2.32.3
+
+# Network Transfer
+paramiko==3.5.0
+PyCryptodome==3.21.0
+
+# Windows Integration
+pywin32==306; sys_platform == 'win32'
+
+# Data Processing
+numpy<2.0.0
+pandas==2.1.4
+
+# Development Tools (optional)
+# black==24.4.2
+# mypy==1.10.0
+# pyinstaller==6.8.0

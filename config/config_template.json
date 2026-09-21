@@ -1,0 +1,45 @@
+{
+  "version": "1.0",
+  "ui": {
+    "theme": "light",
+    "view_mode": "details",
+    "icon_size": 32,
+    "show_hidden_files": false,
+    "window_size": [1200, 800],
+    "window_position": [100, 100]
+  },
+  "search": {
+    "index_path": "index",
+    "max_threads": 4,
+    "index_exclusions": [
+      "node_modules",
+      ".git",
+      "__pycache__"
+    ]
+  },
+  "transfer": {
+    "buffer_size": 8192,
+    "max_retries": 3,
+    "retry_delay": 1.0
+  },
+  "quick_access": {
+    "max_items": 20,
+    "show_recent": true,
+    "auto_cleanup": true
+  },
+  "theme": {
+    "corner_radius": 8,
+    "mica_enabled": false,
+    "animation_enabled": true
+  },
+  "performance": {
+    "virtual_scroll_enabled": true,
+    "thumbnail_cache_size": 100,
+    "leak_detection_interval": 300
+  },
+  "logging": {
+    "level": "INFO",
+    "max_file_size": 10485760,
+    "backup_count": 5
+  }
+}
