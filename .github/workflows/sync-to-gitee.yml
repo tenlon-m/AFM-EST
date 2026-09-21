@@ -9,10 +9,12 @@ on:
   workflow_dispatch:
 
 # 目标 Gitee 仓库
-# 注意：GitHub 用户名 tenlon-m 用连字符，Gitee 用户名 tenlon_m 用下划线，别搞混
+# 注意：三处命名各不相同，别混
+#   GitHub 用户名 = tenlon-m（连字符）   仓库名 = AFM-EST
+#   Gitee  用户名 = tenlonm （连着写）   仓库名 = afm-est
 env:
-  GITEE_USER: tenlon_m
-  GITEE_REPO: AFM-EST
+  GITEE_USER: tenlonm
+  GITEE_REPO: afm-est
   GITEE_HOST: gitee.com
 
 jobs:
@@ -63,10 +65,10 @@ jobs:
           if [ $code -eq 0 ]; then
             echo "::notice title=仓库可访问::$url 已可读写"
           elif echo "$out" | grep -qiE "not found|404|does not exist"; then
-            echo "::error title=仓库不存在::无法访问 $url（404）。请确认：① Gitee 上已创建仓库 $GITEE_REPO；② 用户名是 $GITEE_USER（下划线，不是连字符）。"
+            echo "::error title=仓库不存在::无法访问 $url（404）。请确认：① Gitee 上已创建仓库 $GITEE_REPO；② 用户名 $GITEE_USER 拼写正确。"
             exit 1
           elif echo "$out" | grep -qiE "authentication failed|unauthorized|403|invalid"; then
-            echo "::error title=令牌被拒::GITEE_TOKEN 无效或权限不足。请确认令牌勾选了 projects 权限且未过期。"
+            echo "::error title=令牌无效或权限不足::GITEE_TOKEN 被 Gitee 拒绝（403/Unauthorized）。请确认：① 令牌勾选了 projects 权限且未过期；② 若仓库为私有，确保令牌所属账号有权访问。"
             exit 1
           else
             echo "::error title=访问失败::无法访问 $url，原因见上方输出。"
