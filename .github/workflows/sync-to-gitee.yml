@@ -1,20 +1,29 @@
 name: Sync to Gitee
 
-# 触发条件：
-#   1. 每次往 GitHub 的 main 分支推送代码时，自动同步到 Gitee
-#   2. 也可以在 GitHub 网页 Actions 页面手动点 "Run workflow" 触发
+# ============================================================
+# 通用版 Gitee 镜像同步（新项目直接拷这个文件即可）
+# ------------------------------------------------------------
+# 每个新仓库只需做一次：
+#   Settings -> Secrets and variables -> Actions -> New repository secret
+#   Name  = GITEE_TOKEN
+#   Value = Gitee 私人令牌（https://gitee.com/profile/personal_access_tokens，勾 projects）
+#
+# 目标 Gitee 仓库名怎么定：
+#   默认 = 当前 GitHub 仓库名转小写（AFM-EST -> afm-est），无需改任何配置
+#   想自定义 = 在该仓库的 Variables 里加 GITEE_REPO = 目标仓库名
+# Gitee 用户名默认 tenlonm；换账号时在该仓库 Variables 里加 GITEE_USER 覆盖
+#
+# 仓库不存在时会用令牌自动创建（公开 + 不初始化），失败会明确报错
+# ============================================================
+
 on:
   push:
     branches: [main]
   workflow_dispatch:
 
-# 目标 Gitee 仓库
-# 注意：三处命名各不相同，别混
-#   GitHub 用户名 = tenlon-m（连字符）   仓库名 = AFM-EST
-#   Gitee  用户名 = tenlonm （连着写）   仓库名 = afm-est
 env:
-  GITEE_USER: tenlonm
-  GITEE_REPO: afm-est
+  GITEE_USER: ${{ vars.GITEE_USER || 'tenlonm' }}
+  GITEE_REPO_OVERRIDE: ${{ vars.GITEE_REPO || '' }}
   GITEE_HOST: gitee.com
 
 jobs:
@@ -23,7 +32,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # 1. 拉取完整仓库（fetch-depth: 0 = 全量历史，镜像才完整）
+      # 1. 全量拉取（fetch-depth: 0），镜像历史才完整
       - name: Checkout repository
         uses: actions/checkout@v5
         with:
@@ -35,12 +44,30 @@ jobs:
           GITEE_TOKEN: ${{ secrets.GITEE_TOKEN }}
         run: |
           if [ -z "$GITEE_TOKEN" ]; then
-            echo "::error title=缺少 Secret::仓库未配置 GITEE_TOKEN。请到 Settings -> Secrets and variables -> Actions 添加，值为 Gitee 私人令牌（https://gitee.com/profile/personal_access_tokens 生成，需勾选 projects 权限）。"
+            echo "::error title=缺少 Secret::本仓库未配置 GITEE_TOKEN。请到 Settings -> Secrets and variables -> Actions -> New repository secret 添加，Name 填 GITEE_TOKEN，Value 填 Gitee 私人令牌（https://gitee.com/profile/personal_access_tokens 生成，需勾选 projects 权限）。"
             exit 1
           fi
           echo "::notice title=Token OK::GITEE_TOKEN 已配置"
 
-      # 3. 写入 git 凭据（token 只存在凭据文件里，不会出现在 remote URL 和日志中）
+      # 3. 推导目标仓库：默认取当前仓库名转小写，可用 Variables 覆盖
+      - name: Resolve target repository
+        run: |
+          repo="$GITEE_REPO_OVERRIDE"
+          if [ -z "$repo" ]; then
+            repo="${GITHUB_REPOSITORY#*/}"
+            repo="$(printf '%s' "$repo" | tr '[:upper:]' '[:lower:]')"
+            echo "::notice title=自动推导仓库名::未设置 GITEE_REPO，取当前仓库名并转小写 -> $repo"
+          else
+            echo "::notice title=使用覆盖值::GITEE_REPO（Variables）= $repo"
+          fi
+          {
+            echo "TARGET_USER=$GITEE_USER"
+            echo "TARGET_REPO=$repo"
+            echo "TARGET_URL=https://$GITEE_HOST/$GITEE_USER/$repo.git"
+          } >> "$GITHUB_ENV"
+          echo "同步目标：https://$GITEE_HOST/$GITEE_USER/$repo"
+
+      # 4. 写 git 凭据（token 只落在凭据文件里，不会出现在 remote URL 与日志中）
       - name: Setup credentials
         env:
           GITEE_TOKEN: ${{ secrets.GITEE_TOKEN }}
@@ -50,37 +77,62 @@ jobs:
           chmod 600 ~/.git-credentials
           echo "凭据已写入"
 
-      # 4. 自诊断：确认仓库存在且令牌有读写权限，失败时给出明确原因
-      - name: Diagnose Gitee access
+      # 5. 确认目标仓库可访问；不存在则自动创建
+      - name: Ensure Gitee repository exists
+        env:
+          GITEE_TOKEN: ${{ secrets.GITEE_TOKEN }}
         run: |
-          url="https://$GITEE_HOST/$GITEE_USER/$GITEE_REPO.git"
           set +e
-          out=$(git ls-remote "$url" 2>&1)
+          out=$(git ls-remote "$TARGET_URL" 2>&1)
           code=$?
           set -e
-          echo "----- git ls-remote 输出 -----"
-          echo "$out" | tail -5
-          echo "----- exit code: $code -----"
 
           if [ $code -eq 0 ]; then
-            echo "::notice title=仓库可访问::$url 已可读写"
-          elif echo "$out" | grep -qiE "not found|404|does not exist"; then
-            echo "::error title=仓库不存在::无法访问 $url（404）。请确认：① Gitee 上已创建仓库 $GITEE_REPO；② 用户名 $GITEE_USER 拼写正确。"
-            exit 1
-          elif echo "$out" | grep -qiE "authentication failed|unauthorized|403|invalid"; then
-            echo "::error title=令牌无效或权限不足::GITEE_TOKEN 被 Gitee 拒绝（403/Unauthorized）。请确认：① 令牌勾选了 projects 权限且未过期；② 若仓库为私有，确保令牌所属账号有权访问。"
-            exit 1
-          else
-            echo "::error title=访问失败::无法访问 $url，原因见上方输出。"
+            echo "::notice title=仓库已存在::$TARGET_URL 可读写"
+            exit 0
+          fi
+
+          if echo "$out" | grep -qiE "authentication failed|unauthorized|403|invalid credentials|bad credentials"; then
+            echo "::error title=令牌无效或权限不足::GITEE_TOKEN 被 Gitee 拒绝。请确认令牌勾选了 projects 权限、未过期，且账号有权访问该仓库。"
             exit 1
           fi
 
-      # 5. 把代码推送到 Gitee 的镜像仓库
+          if echo "$out" | grep -qiE "not found|404|does not exist|repository.*not"; then
+            echo "目标仓库不存在，用令牌自动创建 $TARGET_USER/$TARGET_REPO ..."
+            resp=$(curl -s -w '\n%{http_code}' -X POST "https://$GITEE_HOST/api/v5/user/repos" \
+              -d "access_token=$GITEE_TOKEN" \
+              -d "name=$TARGET_REPO" \
+              -d "private=false" \
+              -d "auto_init=false" \
+              -d "description=$TARGET_REPO - GitHub 镜像仓库" 2>&1)
+            http_code=$(printf '%s' "$resp" | tail -n1)
+            body=$(printf '%s' "$resp" | sed '$d' | head -c 400)
+
+            case "$http_code" in
+              200|201)
+                echo "::notice title=仓库已自动创建::https://$GITEE_HOST/$TARGET_USER/$TARGET_REPO"
+                ;;
+              401|403)
+                echo "::error title=自动建仓被拒(HTTP $http_code)::令牌权限不足。请确认令牌勾选 projects。返回：$body"
+                exit 1
+                ;;
+              *)
+                echo "::error title=自动建仓失败(HTTP $http_code)::请手动到 https://gitee.com/projects/new 创建公开仓库 $TARGET_REPO（不要勾选 Readme 初始化），或在该仓库 Variables 里设置 GITEE_REPO 指定正确名字。返回：$body"
+                exit 1
+                ;;
+            esac
+          else
+            echo "::error title=访问仓库失败::无法访问 $TARGET_URL。原始输出："
+            echo "$out" | tail -5
+            exit 1
+          fi
+
+      # 6. 推送代码与 tag 到 Gitee
       - name: Push to Gitee
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
-          git remote add gitee "https://$GITEE_HOST/$GITEE_USER/$GITEE_REPO.git"
+          git remote add gitee "$TARGET_URL"
           git push gitee "main:main" --force
-          git push gitee --tags --force
-          echo "::notice title=同步成功::已同步到 https://gitee.com/$GITEE_USER/$GITEE_REPO"
+          git push gitee --tags --force || echo "::notice title=无 tag::本次没有可推送的 tag，跳过"
+          echo "::notice title=同步成功::已同步到 https://$GITEE_HOST/$TARGET_USER/$TARGET_REPO"
