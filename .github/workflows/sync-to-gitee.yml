@@ -8,9 +8,12 @@ on:
     branches: [main]
   workflow_dispatch:
 
-# 目标 Gitee 仓库（注意：GitHub 用户名 tenlon-m 用连字符，Gitee 用户名 tenlon_m 用下划线）
+# 目标 Gitee 仓库
+# 注意：GitHub 用户名 tenlon-m 用连字符，Gitee 用户名 tenlon_m 用下划线，别搞混
 env:
-  GITEE_REPO: git@gitee.com:tenlon_m/AFM-EST.git
+  GITEE_USER: tenlon_m
+  GITEE_REPO: AFM-EST
+  GITEE_HOST: gitee.com
 
 jobs:
   sync-to-gitee:
@@ -24,57 +27,49 @@ jobs:
         with:
           fetch-depth: 0
 
-      # 2. 配置 SSH 私钥，用于登录 Gitee
-      #    私钥从仓库 Settings -> Secrets and variables -> Actions 里读取
-      - name: Setup SSH key
+      # 2. 检查令牌是否配置（对应仓库 Settings -> Secrets -> GITEE_TOKEN）
+      - name: Check token
         env:
-          GITEE_PRIVATE_KEY: ${{ secrets.GITEE_PRIVATE_KEY }}
+          GITEE_TOKEN: ${{ secrets.GITEE_TOKEN }}
         run: |
-          mkdir -p ~/.ssh
-          chmod 700 ~/.ssh
-
-          if [ -z "$GITEE_PRIVATE_KEY" ]; then
-            echo "::error title=缺少 Secret::仓库里没有配置 GITEE_PRIVATE_KEY。请到 Settings -> Secrets and variables -> Actions 添加。"
+          if [ -z "$GITEE_TOKEN" ]; then
+            echo "::error title=缺少 Secret::仓库未配置 GITEE_TOKEN。请到 Settings -> Secrets and variables -> Actions 添加，值为 Gitee 私人令牌（https://gitee.com/profile/personal_access_tokens 生成，需勾选 projects 权限）。"
             exit 1
           fi
+          echo "::notice title=Token OK::GITEE_TOKEN 已配置"
 
-          printf '%s\n' "$GITEE_PRIVATE_KEY" > ~/.ssh/id_ed25519
-          chmod 600 ~/.ssh/id_ed25519
-          ssh-keyscan -H gitee.com >> ~/.ssh/known_hosts 2>/dev/null
-
-          # 打印私钥指纹，方便和 Gitee 上的公钥指纹核对
-          ssh-keygen -lf ~/.ssh/id_ed25519.pub 2>/dev/null || echo "（.pub 未随私钥一起提供，跳过指纹）"
-          echo "SSH key 配置完成"
-
-      # 3. 自诊断：先验证 SSH 能否通过 Gitee 认证，失败时给出明确原因
-      - name: Diagnose SSH auth
+      # 3. 写入 git 凭据（token 只存在凭据文件里，不会出现在 remote URL 和日志中）
+      - name: Setup credentials
+        env:
+          GITEE_TOKEN: ${{ secrets.GITEE_TOKEN }}
         run: |
+          git config --global credential.helper store
+          printf 'https://%s:%s@%s\n' "$GITEE_USER" "$GITEE_TOKEN" "$GITEE_HOST" > ~/.git-credentials
+          chmod 600 ~/.git-credentials
+          echo "凭据已写入"
+
+      # 4. 自诊断：确认仓库存在且令牌有读写权限，失败时给出明确原因
+      - name: Diagnose Gitee access
+        run: |
+          url="https://$GITEE_HOST/$GITEE_USER/$GITEE_REPO.git"
           set +e
-          out=$(ssh -T -o BatchMode=yes -o ConnectTimeout=15 git@gitee.com 2>&1)
+          out=$(git ls-remote "$url" 2>&1)
           code=$?
-          echo "----- ssh -T git@gitee.com 输出 -----"
-          echo "$out"
+          set -e
+          echo "----- git ls-remote 输出 -----"
+          echo "$out" | tail -5
           echo "----- exit code: $code -----"
 
-          if echo "$out" | grep -qi "only supports pull/fetch"; then
-            echo "::error title=部署公钥缺少推送权限::SSH 认证通过，但 Gitee 返回『DeployKey only supports pull/fetch operations』。请到 Gitee 仓库 -> 管理 -> 部署公钥管理，编辑这把公钥并勾选「启用推送权限」，保存后重试。"
+          if [ $code -eq 0 ]; then
+            echo "::notice title=仓库可访问::$url 已可读写"
+          elif echo "$out" | grep -qiE "not found|404|does not exist"; then
+            echo "::error title=仓库不存在::无法访问 $url（404）。请确认：① Gitee 上已创建仓库 $GITEE_REPO；② 用户名是 $GITEE_USER（下划线，不是连字符）。"
             exit 1
-          fi
-
-          if echo "$out" | grep -qi "successfully authenticated"; then
-            echo "::notice title=SSH OK::Gitee SSH 认证通过（且具备推送权限）"
-          else
-            echo "::error title=SSH 认证失败::Gitee 认不出这把私钥。请逐项检查：① Gitee 仓库管理 -> 部署公钥管理 里是否添加了公钥；② 添加时是否勾选了「启用推送权限」；③ GitHub 里的 GITEE_PRIVATE_KEY 是否是与该公钥配对的私钥（两者必须成对）。"
+          elif echo "$out" | grep -qiE "authentication failed|unauthorized|403|invalid"; then
+            echo "::error title=令牌被拒::GITEE_TOKEN 无效或权限不足。请确认令牌勾选了 projects 权限且未过期。"
             exit 1
-          fi
-
-      # 4. 自诊断：确认目标仓库存在且可访问
-      - name: Diagnose Gitee repo access
-        run: |
-          if git ls-remote "$GITEE_REPO" >/dev/null 2>&1; then
-            echo "::notice title=仓库可访问::$GITEE_REPO 存在且可读"
           else
-            echo "::error title=仓库不可访问::无法访问 $GITEE_REPO。请确认：① Gitee 上是否已创建仓库 AFM-EST；② 用户名是否为 tenlon_m（下划线，不是 tenlon-m）；③ 仓库是否为空仓（未勾选 Readme 初始化）。"
+            echo "::error title=访问失败::无法访问 $url，原因见上方输出。"
             exit 1
           fi
 
@@ -83,7 +78,7 @@ jobs:
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
-          git remote add gitee "$GITEE_REPO"
-          git push gitee main --force
+          git remote add gitee "https://$GITEE_HOST/$GITEE_USER/$GITEE_REPO.git"
+          git push gitee "main:main" --force
           git push gitee --tags --force
-          echo "::notice title=同步成功::已同步到 https://gitee.com/tenlon_m/AFM-EST"
+          echo "::notice title=同步成功::已同步到 https://gitee.com/$GITEE_USER/$GITEE_REPO"
