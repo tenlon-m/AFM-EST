@@ -25,8 +25,8 @@ jobs:
       - name: Setup SSH key
         run: |
           mkdir -p ~/.ssh
-          echo "${{ secrets.GITEE_PRIVATE_KEY }}" > ~/.ssh/id_rsa
-          chmod 600 ~/.ssh/id_rsa
+          echo "${{ secrets.GITEE_PRIVATE_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
           ssh-keyscan -H gitee.com >> ~/.ssh/known_hosts 2>/dev/null
           echo "SSH key 配置完成"
 
@@ -35,7 +35,7 @@ jobs:
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
-          git remote add gitee git@gitee.com:tenlon-m/AFM-EST.git
+          git remote add gitee git@gitee.com:tenlon_m/AFM-EST.git
           git push gitee main --force
           git push gitee --tags --force
-          echo "已同步到 https://gitee.com/tenlon-m/AFM-EST"
+          echo "已同步到 https://gitee.com/tenlon_m/AFM-EST"
