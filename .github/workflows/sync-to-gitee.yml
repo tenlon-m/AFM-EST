@@ -56,8 +56,13 @@ jobs:
           echo "$out"
           echo "----- exit code: $code -----"
 
+          if echo "$out" | grep -qi "only supports pull/fetch"; then
+            echo "::error title=部署公钥缺少推送权限::SSH 认证通过，但 Gitee 返回『DeployKey only supports pull/fetch operations』。请到 Gitee 仓库 -> 管理 -> 部署公钥管理，编辑这把公钥并勾选「启用推送权限」，保存后重试。"
+            exit 1
+          fi
+
           if echo "$out" | grep -qi "successfully authenticated"; then
-            echo "::notice title=SSH OK::Gitee SSH 认证通过"
+            echo "::notice title=SSH OK::Gitee SSH 认证通过（且具备推送权限）"
           else
             echo "::error title=SSH 认证失败::Gitee 认不出这把私钥。请逐项检查：① Gitee 仓库管理 -> 部署公钥管理 里是否添加了公钥；② 添加时是否勾选了「启用推送权限」；③ GitHub 里的 GITEE_PRIVATE_KEY 是否是与该公钥配对的私钥（两者必须成对）。"
             exit 1
