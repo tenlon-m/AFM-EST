@@ -1,0 +1,41 @@
+name: Sync to Gitee
+
+# 触发条件：
+#   1. 每次往 GitHub 的 main 分支推送代码时，自动同步到 Gitee
+#   2. 也可以在 GitHub 网页 Actions 页面手动点 "Run workflow" 触发
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  sync-to-gitee:
+    name: Mirror main branch to Gitee
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1. 拉取完整仓库（fetch-depth: 0 = 全量历史，镜像才完整）
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # 2. 配置 SSH 私钥，用于登录 Gitee
+      #    私钥从仓库 Settings -> Secrets and variables -> Actions 里读取
+      - name: Setup SSH key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.GITEE_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H gitee.com >> ~/.ssh/known_hosts 2>/dev/null
+          echo "SSH key 配置完成"
+
+      # 3. 把代码推送到 Gitee 的镜像仓库
+      - name: Push to Gitee
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git remote add gitee git@gitee.com:tenlon-m/AFM-EST.git
+          git push gitee main --force
+          git push gitee --tags --force
+          echo "已同步到 https://gitee.com/tenlon-m/AFM-EST"
